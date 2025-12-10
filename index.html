@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Email Signature Field Replacer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f5f5f7;
+      color: #222;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    p {
+      margin-top: 0;
+      color: #555;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .section-title {
+      margin-top: 24px;
+      margin-bottom: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #111827;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .button-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .fields-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .field-card {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 10px;
+      background: #fafafa;
+      font-size: 12px;
+    }
+    .field-card small {
+      display: block;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .field-card input {
+      width: 100%;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-left: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .status {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    .status strong {
+      color: #111827;
+    }
+    .flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .output-wrapper {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 16px;
+    }
+    .output-col {
+      min-width: 0;
+    }
+    .small-text {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    .preview-frame-wrapper {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      background: #f9fafb;
+    }
+    #previewFrame {
+      width: 100%;
+      border: 0;
+      background: #fff;
+      min-height: 150px;
+    }
+    @media (max-width: 800px) {
+      .output-wrapper {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+      .container {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Email Signature Field Replacer</h1>
+    <p>Paste your HTML email signature, detect fields (name, title, email, phone), then generate a new version with updated details.</p>
+
+    <!-- Step 1: Paste HTML -->
+    <div class="section">
+      <div class="section-title">1. Paste your HTML signature</div>
+      <label for="signatureInput">Signature HTML</label>
+      <textarea id="signatureInput" placeholder="Paste your HTML email signature here..."></textarea>
+
+      <div class="button-row">
+        <button id="detectBtn">Find fields</button>
+        <button id="clearBtn" class="secondary" type="button">Clear</button>
+      </div>
+      <div id="detectStatus" class="status"></div>
+    </div>
+
+    <!-- Step 2: Edit detected fields -->
+    <div class="section">
+      <div class="flex">
+        <div class="section-title">
+          2. Edit the detected fields
+          <span class="badge">Auto-detected</span>
+        </div>
+        <span class="small-text">You can change the values before generating.</span>
+      </div>
+      <div id="fieldsContainer" class="fields-grid"></div>
+      <div id="noFieldsMsg" class="small-text"></div>
+    </div>
+
+    <!-- Step 3: Generate new HTML -->
+    <div class="section">
+      <div class="section-title">3. Generate and preview updated signature</div>
+      <div class="button-row">
+        <button id="generateBtn" disabled>Generate</button>
+        <button id="copyBtn" class="secondary" type="button" disabled>Copy signature HTML</button>
+      </div>
+
+      <div class="output-wrapper">
+        <!-- Left: raw HTML -->
+        <div class="output-col">
+          <label for="outputHtml">Updated HTML</label>
+          <textarea id="outputHtml" placeholder="Your updated HTML will appear here..." readonly></textarea>
+          <div class="small-text">Copy this HTML or use the button above to copy it with rich formatting.</div>
+        </div>
+
+        <!-- Right: rendered preview -->
+        <div class="output-col">
+          <label>Preview</label>
+          <div class="preview-frame-wrapper">
+            <iframe id="previewFrame" title="Signature preview"></iframe>
+          </div>
+          <div class="small-text">
+            This is how your signature will look when pasted into your email client.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const signatureInput = document.getElementById("signatureInput");
+    const detectBtn = document.getElementById("detectBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const generateBtn = document.getElementById("generateBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const fieldsContainer = document.getElementById("fieldsContainer");
+    const detectStatus = document.getElementById("detectStatus");
+    const outputHtml = document.getElementById("outputHtml");
+    const noFieldsMsg = document.getElementById("noFieldsMsg");
+    const previewFrame = document.getElementById("previewFrame");
+
+    // Store detected fields here
+    let detectedFields = [];
+    let originalHtml = "";
+    let lastGeneratedHtml = "";
+
+    function resetUI() {
+      fieldsContainer.innerHTML = "";
+      detectStatus.textContent = "";
+      outputHtml.value = "";
+      noFieldsMsg.textContent = "";
+      detectedFields = [];
+      generateBtn.disabled = true;
+      copyBtn.disabled = true;
+      lastGeneratedHtml = "";
+      updatePreview(""); // clear preview
+    }
+
+    clearBtn.addEventListener("click", () => {
+      signatureInput.value = "";
+      resetUI();
+    });
+
+    detectBtn.addEventListener("click", () => {
+      const html = signatureInput.value.trim();
+      resetUI();
+
+      if (!html) {
+        detectStatus.innerHTML = "<strong>Nothing to scan.</strong> Paste your signature HTML first.";
+        return;
+      }
+
+      originalHtml = html;
+      detectedFields = detectFieldsFromHtml(html);
+      renderFields(detectedFields);
+
+      if (detectedFields.length === 0) {
+        detectStatus.innerHTML = "<strong>No obvious fields found.</strong> You can still manually replace values later by editing the HTML.";
+        noFieldsMsg.textContent = "Tip: Use clear placeholder text like 'Full name', 'Job title', etc. for easier detection.";
+      } else {
+        detectStatus.innerHTML = `<strong>Found ${detectedFields.length} field(s).</strong> Edit the values below, then click Generate.`;
+        generateBtn.disabled = false;
+      }
+    });
+
+    generateBtn.addEventListener("click", () => {
+      if (!originalHtml) return;
+
+      let updatedHtml = originalHtml;
+
+      // Read current input values & replace
+      detectedFields.forEach((field) => {
+        const input = document.querySelector(`input[data-field-key="${field.key}"]`);
+        if (!input) return;
+
+        const newValue = input.value || field.originalValue;
+        if (!field.originalValue) return;
+
+        // Simple global string replace
+        updatedHtml = updatedHtml.split(field.originalValue).join(newValue);
+      });
+
+      lastGeneratedHtml = updatedHtml;
+      outputHtml.value = updatedHtml;
+      copyBtn.disabled = !updatedHtml.trim();
+      updatePreview(updatedHtml);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      if (!lastGeneratedHtml) return;
+
+      const html = lastGeneratedHtml;
+
+      // Try to use Clipboard API with text/html for rich paste
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          const blob = new Blob([html], { type: "text/html" });
+          const data = [new ClipboardItem({ "text/html": blob })];
+          await navigator.clipboard.write(data);
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => (copyBtn.textContent = "Copy signature HTML"), 1200);
+          return;
+        } catch (err) {
+          console.warn("Rich clipboard failed, falling back to text-only copy.", err);
+        }
+      }
+
+      // Fallback: select the textarea and copy as text
+      outputHtml.focus();
+      outputHtml.select();
+      try {
+        document.execCommand("copy");
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => (copyBtn.textContent = "Copy signature HTML"), 1200);
+      } catch (err) {
+        console.error("Copy failed", err);
+      } finally {
+        window.getSelection().removeAllRanges();
+      }
+    });
+
+    function renderFields(fields) {
+      fieldsContainer.innerHTML = "";
+      if (!fields.length) return;
+
+      fields.forEach((field) => {
+        const card = document.createElement("div");
+        card.className = "field-card";
+        card.innerHTML = `
+          <small>${field.label}</small>
+          <input 
+            type="text" 
+            data-field-key="${field.key}" 
+            value="${escapeHtml(field.suggestedValue || field.originalValue || "")}" 
+          />
+          <small>Original: <code>${escapeHtml(field.originalValue || "")}</code></small>
+        `;
+        fieldsContainer.appendChild(card);
+      });
+    }
+
+    // Basic heuristics to detect common fields
+    function detectFieldsFromHtml(html) {
+      const fields = [];
+
+      // 1) Email
+      const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+      const emailMatch = html.match(emailRegex);
+      if (emailMatch) {
+        fields.push({
+          key: "email",
+          label: "Email",
+          originalValue: emailMatch[0],
+          suggestedValue: emailMatch[0]
+        });
+      }
+
+      // 2) Phone number (very loose pattern)
+      const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/;
+      const phoneMatch = html.match(phoneRegex);
+      if (phoneMatch) {
+        fields.push({
+          key: "phone",
+          label: "Phone",
+          originalValue: phoneMatch[0].trim(),
+          suggestedValue: phoneMatch[0].trim()
+        });
+      }
+
+      // 3) Parse as HTML to get text nodes
+      const wrapperHtml = "<div>" + html + "</div>";
+      let textNodes = [];
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(wrapperHtml, "text/html");
+        textNodes = getTextNodes(doc.body)
+          .map((n) => n.nodeValue.trim())
+          .filter((t) => t.length > 0);
+      } catch (e) {
+        // Fallback: simple split on tags
+        textNodes = html
+          .replace(/<[^>]+>/g, " ")
+          .split(/\s{2,}/)
+          .map((t) => t.trim())
+          .filter((t) => t);
+      }
+
+      // Remove email & phone from text candidates
+      const cleaned = textNodes.filter((t) => {
+        return !emailRegex.test(t) && !phoneRegex.test(t);
+      });
+
+      // If placeholders exist, prioritise those
+      const PLACEHOLDER_NAME = "Full name";
+      const PLACEHOLDER_TITLE = "This is a title";
+
+      if (html.includes(PLACEHOLDER_NAME)) {
+        fields.push({
+          key: "fullName",
+          label: "Full name",
+          originalValue: PLACEHOLDER_NAME,
+          suggestedValue: ""
+        });
+      }
+
+      if (html.includes(PLACEHOLDER_TITLE)) {
+        fields.push({
+          key: "title",
+          label: "Job title",
+          originalValue: PLACEHOLDER_TITLE,
+          suggestedValue: ""
+        });
+      }
+
+      // Fallback: first 1–2 non-empty text nodes as name/title
+      if (!fields.some((f) => f.key === "fullName") && cleaned[0]) {
+        fields.push({
+          key: "fullName",
+          label: "Full name",
+          originalValue: cleaned[0],
+          suggestedValue: cleaned[0]
+        });
+      }
+      if (!fields.some((f) => f.key === "title") && cleaned[1]) {
+        fields.push({
+          key: "title",
+          label: "Job title",
+          originalValue: cleaned[1],
+          suggestedValue: cleaned[1]
+        });
+      }
+
+      // Deduplicate by originalValue
+      const seen = new Set();
+      return fields.filter((f) => {
+        if (!f.originalValue) return false;
+        const key = f.label + "::" + f.originalValue;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function getTextNodes(node) {
+      const textNodes = [];
+      function walk(n) {
+        if (n.nodeType === Node.TEXT_NODE) {
+          textNodes.push(n);
+        } else {
+          n.childNodes.forEach(walk);
+        }
+      }
+      walk(node);
+      return textNodes;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // Render HTML into iframe for safe-ish preview
+    function updatePreview(html) {
+      const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+      doc.open();
+      if (!html) {
+        doc.write("<!doctype html><html><head><meta charset='utf-8'></head><body style='font-family:system-ui; font-size:12px; color:#9ca3af; display:flex; align-items:center; justify-content:center; height:120px;'>Signature preview will appear here after you generate it.</body></html>");
+      } else {
+        doc.write(
+          "<!doctype html><html><head><meta charset='utf-8'></head><body>" +
+          html +
+          "</body></html>"
+        );
+      }
+      doc.close();
+
+      // Adjust iframe height to content (roughly)
+      setTimeout(() => {
+        try {
+          const body = doc.body;
+          const height = body.scrollHeight || 150;
+          previewFrame.style.height = Math.min(Math.max(height, 150), 400) + "px";
+        } catch (e) {
+          // ignore
+        }
+      }, 50);
+    }
+
+    // Initialize empty preview on load
+    updatePreview("");
+  </script>
+</body>
+</html>
