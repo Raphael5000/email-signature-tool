@@ -11,7 +11,7 @@
     }
     body {
       margin: 0;
-      padding: 24px;
+      padding: 0;
       background: #f5f5f7;
       color: #222;
     }
@@ -24,9 +24,23 @@
       color: #555;
       font-size: 14px;
     }
+    .nav {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .nav img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
     .container {
       max-width: 960px;
       margin: 0 auto;
+      margin-top: 24px;
       background: #fff;
       border-radius: 12px;
       padding: 20px;
@@ -163,7 +177,7 @@
     }
     @media (max-width: 600px) {
       body {
-        padding: 12px;
+        padding: 0;
       }
       .container {
         padding: 16px;
@@ -172,6 +186,9 @@
   </style>
 </head>
 <body>
+  <header class="nav">
+    <img src="https://cdn.prod.website-files.com/6826f1bc2fc92556aa2497cc/69392412e6b34a38bb174dc6_Signature%20Tool%20Logo.png" alt="Signature Tool logo" />
+  </header>
   <div class="container">
     <h1>Email Signature Field Replacer</h1>
     <p>Paste your HTML email signature, detect fields (name, title, email, phone), then generate a new version with updated details.</p>
