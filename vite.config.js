@@ -10,5 +10,18 @@ export default defineConfig({
       'lib': path.resolve(__dirname, './lib'),
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'radix-vendor': ['@radix-ui/react-navigation-menu', '@radix-ui/react-label', '@radix-ui/react-slot'],
+        },
+      },
+    },
+  },
 })
 

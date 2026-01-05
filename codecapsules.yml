@@ -1,0 +1,17 @@
+version: 1
+build:
+  commands:
+    - npm install
+    - npm run build
+serve:
+  static: dist
+  routes:
+    "/*": "/index.html"
+  headers:
+    - name: Content-Type
+      value: "application/javascript"
+      path: "*.js"
+    - name: Content-Type
+      value: "text/css"
+      path: "*.css"
+

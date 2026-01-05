@@ -1,0 +1,26 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# Handle MIME types for JavaScript modules
+AddType application/javascript .js
+AddType application/javascript .mjs
+
+# Serve index.html for all routes (SPA routing)
+RewriteBase /
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+
+# Set correct MIME types
+<IfModule mod_mime.c>
+  AddType application/javascript js mjs
+  AddType text/css css
+  AddType application/json json
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+

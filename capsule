@@ -1,0 +1,10 @@
+version: 1
+build:
+  - npm install
+  - npm run build
+serve:
+  root: dist
+  clean_urls: true
+  routes:
+    "/*": "/index.html"
+
