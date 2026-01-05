@@ -7,4 +7,7 @@ serve:
   clean_urls: true
   routes:
     "/*": "/index.html"
-
+  mime_types:
+    ".js": "application/javascript"
+    ".mjs": "application/javascript"
+    ".css": "text/css"

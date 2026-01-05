@@ -21,6 +21,10 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom'],
           'radix-vendor': ['@radix-ui/react-navigation-menu', '@radix-ui/react-label', '@radix-ui/react-slot'],
         },
+        // Ensure .js extension is used (not .mjs)
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
   },
