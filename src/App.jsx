@@ -10,6 +10,8 @@ import { Textarea } from '../components/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/card'
 import { Label } from '../components/label'
 import { Menu, X } from 'lucide-react'
+import { Toaster } from '../components/sonner'
+import { toast } from 'sonner'
 
 function App() {
   const [signatureHtml, setSignatureHtml] = useState('')
@@ -226,7 +228,9 @@ function App() {
         const blob = new Blob([html], { type: "text/html" })
         const data = [new ClipboardItem({ "text/html": blob })]
         await navigator.clipboard.write(data)
-        // You could add a toast notification here
+        toast.success("Signature Copied", {
+          description: "Paste it into your email client"
+        })
         return
       } catch (err) {
         console.warn("Rich clipboard failed, falling back to text-only copy.", err)
@@ -240,6 +244,9 @@ function App() {
       textarea.select()
       try {
         document.execCommand("copy")
+        toast.success("Signature Copied", {
+          description: "Paste it into your email client"
+        })
       } catch (err) {
         console.error("Copy failed", err)
       } finally {
@@ -521,6 +528,7 @@ function App() {
           </p>
         </div>
       </footer>
+      <Toaster />
     </div>
   )
 }
