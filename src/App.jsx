@@ -65,41 +65,74 @@ function App() {
 
   const detectFieldsFromHtml = (html) => {
     const fields = []
+    const seen = new Set()
 
-    // 1) Email
-    const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
-    const emailMatch = html.match(emailRegex)
-    if (emailMatch) {
+    // Helper to add field if not duplicate
+    const addField = (key, label, originalValue, suggestedValue = null) => {
+      if (!originalValue || originalValue.trim().length === 0) return
+      const uniqueKey = `${label}::${originalValue}`
+      if (seen.has(uniqueKey)) return
+      seen.add(uniqueKey)
       fields.push({
-        key: "email",
-        label: "Email",
-        originalValue: emailMatch[0],
-        suggestedValue: emailMatch[0]
+        key: key || `field_${fields.length}`,
+        label,
+        originalValue: originalValue.trim(),
+        suggestedValue: suggestedValue !== null ? suggestedValue : originalValue.trim(),
+        enabled: true // New property to allow users to toggle fields
       })
     }
 
-    // 2) Phone number (very loose pattern)
-    const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/
-    const phoneMatch = html.match(phoneRegex)
-    if (phoneMatch) {
-      fields.push({
-        key: "phone",
-        label: "Phone",
-        originalValue: phoneMatch[0].trim(),
-        suggestedValue: phoneMatch[0].trim()
-      })
-    }
-
-    // 3) Parse as HTML to get text nodes
+    // Parse HTML
     const wrapperHtml = "<div>" + html + "</div>"
-    let textNodes = []
+    let doc
     try {
       const parser = new DOMParser()
-      const doc = parser.parseFromString(wrapperHtml, "text/html")
+      doc = parser.parseFromString(wrapperHtml, "text/html")
+    } catch (e) {
+      doc = null
+    }
+
+    // 1) Extract all links/URLs (over-detect)
+    const urlRegex = /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+/gi
+    const urlMatches = html.match(urlRegex) || []
+    urlMatches.forEach((url, index) => {
+      addField(`link_${index}`, `Link ${index + 1}`, url)
+    })
+
+    // Also extract href attributes from anchor tags
+    if (doc) {
+      const links = doc.querySelectorAll('a[href]')
+      links.forEach((link, index) => {
+        const href = link.getAttribute('href')
+        if (href && (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:'))) {
+          const linkText = link.textContent.trim() || href
+          addField(`link_href_${index}`, `Link: ${linkText.substring(0, 30)}`, href)
+        }
+      })
+    }
+
+    // 2) Email addresses (all instances)
+    const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+    const emailMatches = html.match(emailRegex) || []
+    emailMatches.forEach((email, index) => {
+      addField(`email_${index}`, index === 0 ? "Email" : `Email ${index + 1}`, email)
+    })
+
+    // 3) Phone numbers (all instances)
+    const phoneRegex = /(\+?\d[\d\s().-]{7,}\d)/g
+    const phoneMatches = html.match(phoneRegex) || []
+    phoneMatches.forEach((phone, index) => {
+      const cleaned = phone.trim()
+      addField(`phone_${index}`, index === 0 ? "Phone" : `Phone ${index + 1}`, cleaned)
+    })
+
+    // 4) Parse text nodes from HTML
+    let textNodes = []
+    if (doc) {
       textNodes = getTextNodes(doc.body)
         .map((n) => n.nodeValue.trim())
         .filter((t) => t.length > 0)
-    } catch (e) {
+    } else {
       // Fallback: simple split on tags
       textNodes = html
         .replace(/<[^>]+>/g, " ")
@@ -108,60 +141,109 @@ function App() {
         .filter((t) => t)
     }
 
-    // Remove email & phone from text candidates
-    const cleaned = textNodes.filter((t) => {
-      return !emailRegex.test(t) && !phoneRegex.test(t)
+    // 5) Look for common label patterns (Name, Title, Position, etc.)
+    const labelPatterns = [
+      { pattern: /(?:name|full\s*name|your\s*name)[\s:]*([^\n<]+)/i, label: "Name", key: "name" },
+      { pattern: /(?:title|job\s*title|position|role)[\s:]*([^\n<]+)/i, label: "Title", key: "title" },
+      { pattern: /(?:position|job\s*position)[\s:]*([^\n<]+)/i, label: "Position", key: "position" },
+      { pattern: /(?:company|organization|org)[\s:]*([^\n<]+)/i, label: "Company", key: "company" },
+      { pattern: /(?:department|dept)[\s:]*([^\n<]+)/i, label: "Department", key: "department" },
+      { pattern: /(?:address|location)[\s:]*([^\n<]+)/i, label: "Address", key: "address" },
+      { pattern: /(?:website|web|site)[\s:]*([^\n<]+)/i, label: "Website", key: "website" },
+    ]
+
+    labelPatterns.forEach(({ pattern, label, key }) => {
+      const matches = html.match(pattern)
+      if (matches && matches[1]) {
+        const value = matches[1].trim()
+        if (value && value.length > 0) {
+          addField(key, label, value)
+        }
+      }
     })
 
-    // If placeholders exist, prioritise those
-    const PLACEHOLDER_NAME = "Full name"
-    const PLACEHOLDER_TITLE = "This is a title"
+    // 6) Check for common placeholders
+    const placeholders = [
+      { pattern: /full\s*name/i, label: "Full name", key: "fullName" },
+      { pattern: /this\s*is\s*a\s*title/i, label: "Job title", key: "title" },
+      { pattern: /your\s*name/i, label: "Name", key: "name" },
+      { pattern: /your\s*title/i, label: "Title", key: "title" },
+      { pattern: /your\s*position/i, label: "Position", key: "position" },
+      { pattern: /company\s*name/i, label: "Company", key: "company" },
+    ]
 
-    if (html.includes(PLACEHOLDER_NAME)) {
-      fields.push({
-        key: "fullName",
-        label: "Full name",
-        originalValue: PLACEHOLDER_NAME,
-        suggestedValue: ""
-      })
-    }
+    placeholders.forEach(({ pattern, label, key }) => {
+      if (pattern.test(html)) {
+        const match = html.match(new RegExp(pattern.source, 'i'))
+        if (match) {
+          addField(key, label, match[0], "")
+        }
+      }
+    })
 
-    if (html.includes(PLACEHOLDER_TITLE)) {
-      fields.push({
-        key: "title",
-        label: "Job title",
-        originalValue: PLACEHOLDER_TITLE,
-        suggestedValue: ""
-      })
-    }
+    // 7) Extract meaningful text nodes (over-detect)
+    const emailRegex2 = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+    const phoneRegex2 = /\+?\d[\d\s().-]{7,}\d/
+    const urlRegex2 = /https?:\/\/|www\./i
 
-    // Fallback: first 1–2 non-empty text nodes as name/title
-    if (!fields.some((f) => f.key === "fullName") && cleaned[0]) {
-      fields.push({
-        key: "fullName",
-        label: "Full name",
-        originalValue: cleaned[0],
-        suggestedValue: cleaned[0]
-      })
-    }
-    if (!fields.some((f) => f.key === "title") && cleaned[1]) {
-      fields.push({
-        key: "title",
-        label: "Job title",
-        originalValue: cleaned[1],
-        suggestedValue: cleaned[1]
-      })
-    }
-
-    // Deduplicate by originalValue
-    const seen = new Set()
-    return fields.filter((f) => {
-      if (!f.originalValue) return false
-      const key = f.label + "::" + f.originalValue
-      if (seen.has(key)) return false
-      seen.add(key)
+    const cleaned = textNodes.filter((t) => {
+      // Filter out emails, phones, URLs, and very short text
+      if (t.length < 2) return false
+      if (emailRegex2.test(t)) return false
+      if (phoneRegex2.test(t)) return false
+      if (urlRegex2.test(t)) return false
+      // Filter out common HTML artifacts
+      if (/^[\s\-_|•]+$/.test(t)) return false
       return true
     })
+
+    // Add first few meaningful text nodes as potential fields
+    // Prioritize longer text (likely names/titles)
+    const sortedByLength = [...cleaned].sort((a, b) => b.length - a.length)
+    const topTextNodes = sortedByLength.slice(0, 10) // Take top 10 longest
+
+    topTextNodes.forEach((text, index) => {
+      // Skip if already detected as a specific field
+      const alreadyDetected = fields.some(f => f.originalValue === text)
+      if (!alreadyDetected) {
+        // Try to infer label based on position and content
+        let label = "Text content"
+        if (index === 0 && text.length > 3 && !fields.some(f => f.key === "name" || f.key === "fullName")) {
+          label = "Name (detected)"
+        } else if (index === 1 && text.length > 3 && !fields.some(f => f.key === "title" || f.key === "position")) {
+          label = "Title (detected)"
+        } else {
+          label = `Text ${index + 1}`
+        }
+        addField(`text_${index}`, label, text)
+      }
+    })
+
+    // 8) Also check for text that looks like names (capitalized words)
+    cleaned.forEach((text, index) => {
+      if (text.length >= 3 && text.length <= 50) {
+        // Check if it looks like a name (starts with capital, has letters)
+        if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(text)) {
+          const alreadyDetected = fields.some(f => f.originalValue === text)
+          if (!alreadyDetected && !fields.some(f => f.key === "name" || f.key === "fullName")) {
+            addField("name_detected", "Name (detected)", text)
+          }
+        }
+      }
+    })
+
+    // Sort fields: prioritize specific fields (email, phone, name, title) first
+    const priorityOrder = ['email', 'phone', 'name', 'fullName', 'title', 'position', 'company']
+    fields.sort((a, b) => {
+      const aPriority = priorityOrder.findIndex(p => a.key.startsWith(p))
+      const bPriority = priorityOrder.findIndex(p => b.key.startsWith(p))
+      if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority
+      if (aPriority !== -1) return -1
+      if (bPriority !== -1) return 1
+      return 0
+    })
+
+    return fields
   }
 
   const handleDetect = () => {
@@ -188,7 +270,7 @@ function App() {
       setDetectStatus("<strong>No obvious fields found.</strong> You can still manually replace values later by editing the HTML.")
       setNoFieldsMsg("Tip: Use clear placeholder text like 'Full name', 'Job title', etc. for easier detection.")
     } else {
-      setDetectStatus(`<strong>Found ${fields.length} field(s).</strong> Edit the values below, then click Generate.`)
+      setDetectStatus(`<strong>Found ${fields.length} potential field(s).</strong> Toggle fields on/off and edit values below, then click Generate.`)
       setIsGenerateDisabled(false)
     }
   }
@@ -200,15 +282,33 @@ function App() {
     }))
   }
 
+  const handleFieldToggle = (key) => {
+    setDetectedFields(prev => 
+      prev.map(field => 
+        field.key === key 
+          ? { ...field, enabled: !field.enabled }
+          : field
+      )
+    )
+  }
+
   const handleGenerate = () => {
     if (!originalHtml) return
 
     let updatedHtml = originalHtml
 
-    // Replace field values
-    detectedFields.forEach((field) => {
+    // Replace only enabled field values
+    // Sort by length (longest first) to avoid partial replacements
+    const enabledFields = detectedFields
+      .filter(field => field.enabled !== false)
+      .sort((a, b) => (b.originalValue?.length || 0) - (a.originalValue?.length || 0))
+
+    enabledFields.forEach((field) => {
       const newValue = fieldValues[field.key] || field.originalValue
       if (!field.originalValue) return
+      
+      // Use simple string replacement for exact matches
+      // This handles HTML entities and special characters naturally
       updatedHtml = updatedHtml.split(field.originalValue).join(newValue)
     })
 
@@ -442,21 +542,54 @@ function App() {
                 )}
               </div>
               {detectedFields.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {detectedFields.map((field) => (
-                    <div key={field.key} className="space-y-2">
-                      <Label className="block text-sm font-medium text-gray-700">{field.label}</Label>
-                      <input 
-                        type="text" 
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                        className="w-full text-sm px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black" 
-                      />
-                      <small className="block text-xs text-gray-500">
-                        Original: <code className="font-mono">{escapeHtml(field.originalValue || "")}</code>
-                      </small>
-                    </div>
-                  ))}
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-500 mb-3">
+                    Toggle fields on/off to control which ones will be replaced. Unchecked fields will be left unchanged.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {detectedFields.map((field) => (
+                      <div 
+                        key={field.key} 
+                        className={`space-y-2 p-3 rounded-md border ${
+                          field.enabled 
+                            ? 'border-gray-300 bg-white' 
+                            : 'border-gray-200 bg-gray-50 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={field.enabled !== false}
+                            onChange={() => handleFieldToggle(field.key)}
+                            className="w-4 h-4 text-black border-gray-300 rounded focus:ring-2 focus:ring-black"
+                            id={`field-${field.key}`}
+                          />
+                          <Label 
+                            htmlFor={`field-${field.key}`}
+                            className={`text-sm font-medium ${
+                              field.enabled ? 'text-gray-700' : 'text-gray-500'
+                            } cursor-pointer`}
+                          >
+                            {field.label}
+                          </Label>
+                        </div>
+                        <input 
+                          type="text" 
+                          value={fieldValues[field.key] || ''}
+                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                          disabled={!field.enabled}
+                          className={`w-full text-sm px-3 py-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-black focus:border-black ${
+                            field.enabled 
+                              ? 'border-gray-300 bg-white' 
+                              : 'border-gray-200 bg-gray-100 cursor-not-allowed'
+                          }`}
+                        />
+                        <small className="block text-xs text-gray-500">
+                          Original: <code className="font-mono">{escapeHtml(field.originalValue || "")}</code>
+                        </small>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="p-8 text-center">
