@@ -9,6 +9,7 @@ import { Button } from '../components/button'
 import { Textarea } from '../components/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/card'
 import { Label } from '../components/label'
+import { Menu, X } from 'lucide-react'
 
 function App() {
   const [signatureHtml, setSignatureHtml] = useState('')
@@ -20,6 +21,7 @@ function App() {
   const [fieldValues, setFieldValues] = useState({})
   const [isGenerateDisabled, setIsGenerateDisabled] = useState(true)
   const [isCopyDisabled, setIsCopyDisabled] = useState(true)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const previewFrameRef = useRef(null)
 
   const resetUI = () => {
@@ -280,13 +282,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
-      <header className="flex h-[68px] items-center px-6 bg-white border-b border-gray-200">
+      <header className="relative flex h-[68px] items-center justify-between px-6 bg-white border-b border-gray-200">
         <img 
           className="h-9 w-auto" 
           src="https://cdn.prod.website-files.com/6826f1bc2fc92556aa2497cc/69392412e6b34a38bb174dc6_Signature%20Tool%20Logo.png" 
           alt="Signature Tool logo" 
         />
-        <NavigationMenu className="ml-16">
+        
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden md:flex ml-16">
           <NavigationMenuList>
             <NavigationMenuItem>
               <NavigationMenuLink 
@@ -308,6 +312,41 @@ function App() {
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
+
+        {/* Mobile Hamburger Button */}
+        <button
+          className="md:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
+        </button>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg md:hidden z-50">
+            <nav className="flex flex-col py-2">
+              <a
+                href="#"
+                className="px-6 py-3 text-sm font-medium text-gray-900 hover:bg-gray-100 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Editor
+              </a>
+              <a
+                href="#"
+                className="px-6 py-3 text-sm font-medium text-gray-500 opacity-50 cursor-not-allowed"
+                onClick={(e) => e.preventDefault()}
+              >
+                Generator
+              </a>
+            </nav>
+          </div>
+        )}
       </header>
 
       <div className="max-w-5xl mx-auto mt-6 p-5 sm:p-6">
