@@ -281,7 +281,7 @@ function App() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen text-gray-900" style={{ backgroundColor: '#F7FAF9' }}>
       <header className="relative flex h-[68px] items-center justify-between px-6 bg-white border-b border-gray-200">
         <div className="flex items-center gap-3">
           <img 
@@ -289,7 +289,6 @@ function App() {
             src="https://cdn.prod.website-files.com/6826f1bc2fc92556aa2497cc/69392412e6b34a38bb174dc6_Signature%20Tool%20Logo.png" 
             alt="Signature Tool logo" 
           />
-          <span className="text-lg font-semibold text-gray-900">Signature Tool</span>
         </div>
         
         {/* Desktop Navigation */}
@@ -380,22 +379,20 @@ function App() {
         </div>
 
         {/* Step 1: Paste your HTML signature */}
-        <div className="mb-12">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm">
+        <div className="mb-8">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm mt-1">
               1
             </div>
-            <div className="flex-1">
+            <div className="flex-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <h2 className="hivory-h5 mb-4">Paste your HTML email signature</h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <Textarea 
-                  id="signatureInput"
-                  value={signatureHtml}
-                  onChange={(e) => setSignatureHtml(e.target.value)}
-                  className="w-full min-h-[160px] font-mono text-sm resize-y border-0 focus-visible:ring-0 p-0" 
-                  placeholder="Paste your HTML email signature here..."
-                />
-              </div>
+              <Textarea 
+                id="signatureInput"
+                value={signatureHtml}
+                onChange={(e) => setSignatureHtml(e.target.value)}
+                className="w-full min-h-[160px] font-mono text-sm resize-y" 
+                placeholder="Paste your HTML email signature here..."
+              />
               <div className="flex flex-wrap gap-2 mt-4">
                 <Button 
                   onClick={handleDetect}
@@ -423,12 +420,12 @@ function App() {
         </div>
 
         {/* Step 2: Edit the detected fields */}
-        <div className="mb-12">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm">
+        <div className="mb-8">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm mt-1">
               2
             </div>
-            <div className="flex-1">
+            <div className="flex-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="hivory-h5">Edit the detected fields</h2>
                 {detectedFields.length > 0 && (
@@ -438,26 +435,24 @@ function App() {
                 )}
               </div>
               {detectedFields.length > 0 ? (
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {detectedFields.map((field) => (
-                      <div key={field.key} className="space-y-2">
-                        <Label className="block text-sm font-medium text-gray-700">{field.label}</Label>
-                        <input 
-                          type="text" 
-                          value={fieldValues[field.key] || ''}
-                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                          className="w-full text-sm px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black" 
-                        />
-                        <small className="block text-xs text-gray-500">
-                          Original: <code className="font-mono">{escapeHtml(field.originalValue || "")}</code>
-                        </small>
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {detectedFields.map((field) => (
+                    <div key={field.key} className="space-y-2">
+                      <Label className="block text-sm font-medium text-gray-700">{field.label}</Label>
+                      <input 
+                        type="text" 
+                        value={fieldValues[field.key] || ''}
+                        onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                        className="w-full text-sm px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black" 
+                      />
+                      <small className="block text-xs text-gray-500">
+                        Original: <code className="font-mono">{escapeHtml(field.originalValue || "")}</code>
+                      </small>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                <div className="p-8 text-center">
                   <p className="hivory-paragraph-small text-gray-500">
                     {noFieldsMsg || "No fields detected yet. Paste your HTML signature and click 'Find fields'."}
                   </p>
@@ -469,11 +464,11 @@ function App() {
 
         {/* Step 3: Generate and preview updated signature */}
         <div>
-          <div className="flex items-start gap-4 mb-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm mt-1">
               3
             </div>
-            <div className="flex-1">
+            <div className="flex-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <h2 className="hivory-h5 mb-4">Generate and preview updated signature</h2>
               <div className="flex flex-wrap gap-2 mb-4">
                 <Button 
@@ -494,29 +489,14 @@ function App() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <Label htmlFor="outputHtml" className="block text-sm font-medium text-gray-700 mb-2">
-                    Updated HTML
-                  </Label>
-                  <Textarea 
-                    id="outputHtml"
-                    value={outputHtml}
-                    readOnly
-                    className="w-full min-h-[160px] font-mono text-sm resize-y border-0 focus-visible:ring-0 p-0" 
-                    placeholder="Your updated HTML will appear here..."
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">Preview</Label>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <iframe 
+                    ref={previewFrameRef}
+                    title="Signature preview" 
+                    className="w-full border-0 bg-white min-h-[150px]"
                   />
-                </div>
-
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-2">Preview</Label>
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <iframe 
-                      ref={previewFrameRef}
-                      title="Signature preview" 
-                      className="w-full border-0 bg-white min-h-[150px]"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
